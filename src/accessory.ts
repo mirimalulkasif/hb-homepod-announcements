@@ -29,7 +29,7 @@ export class AnnounceAccessory {
     const { Characteristic, Service } = this.platform;
 
     this.accessory.getService(Service.AccessoryInformation)
-      ?.setCharacteristic(Characteristic.Manufacturer, 'HomePod Announce')
+      ?.setCharacteristic(Characteristic.Manufacturer, 'HomePod Announcements')
       .setCharacteristic(Characteristic.Model, 'TTS Switch')
       .setCharacteristic(Characteristic.SerialNumber, slug(announcement.name));
 

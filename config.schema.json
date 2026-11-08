@@ -1,5 +1,5 @@
 {
-  "pluginAlias": "HomePodAnnounce",
+  "pluginAlias": "HomePodAnnouncements",
   "pluginType": "platform",
   "singular": true,
   "headerDisplay": "Momentary switches that speak text on a HomePod. Needs a TTS engine (edge-tts or espeak-ng) and playback via pyatv or homebridge-homepod-radio. Home app: tap the switch → HomePod talks → switch turns off.",
@@ -9,7 +9,7 @@
       "name": {
         "title": "Name",
         "type": "string",
-        "default": "HomePod Announce",
+        "default": "HomePod Announcements",
         "required": true
       },
       "homepodId": {

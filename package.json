@@ -1,6 +1,6 @@
 {
-  "name": "homebridge-homepod-announce",
-  "displayName": "HomePod Announce",
+  "name": "homebridge-homepod-announcements",
+  "displayName": "HomePod Announcements",
   "version": "0.1.0",
   "description": "Momentary HomeKit switches that speak configured phrases on a HomePod via TTS + AirPlay (pyatv).",
   "license": "Apache-2.0",

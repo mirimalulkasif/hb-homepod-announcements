@@ -1,6 +1,8 @@
-# homebridge-homepod-announce
+# homebridge-homepod-announcements
 
 Momentary **HomeKit switches** that speak configured phrases on a **HomePod** (or any AirPlay speaker).
+
+GitHub: [`hb-homepod-announcements`](https://github.com/mirimalulkasif/hb-homepod-announcements). Homebridge requires the `homebridge-` package prefix (same pattern as `hb-switcher-laundry` → `homebridge-switcher-laundry`).
 
 Tap a switch in the Home app (or flip it from an automation) → the plug-in synthesizes speech → streams audio to the HomePod → the switch turns itself off.
 
@@ -30,8 +32,8 @@ hb-service restart
 
 ```json
 {
-  "platform": "HomePodAnnounce",
-  "name": "HomePod Announce",
+  "platform": "HomePodAnnouncements",
+  "name": "HomePod Announcements",
   "homepodId": "AA:BB:CC:DD:EE:FF",
   "volume": 45,
   "voice": "he-IL-HilaNeural",

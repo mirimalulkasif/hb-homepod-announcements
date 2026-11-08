@@ -18,8 +18,8 @@ test('the plugin registers the HomePod Announce platform', () => {
     },
   });
   assert.deepEqual(registered, {
-    pluginName: 'homebridge-homepod-announce',
-    platformName: 'HomePodAnnounce',
+    pluginName: 'homebridge-homepod-announcements',
+    platformName: 'HomePodAnnouncements',
     constructor: HomePodAnnouncePlatform,
   });
 });
@@ -114,7 +114,7 @@ function createHarness() {
   const { platform, fake } = createTestPlatform(
     { info() {}, warn() {}, error() {}, debug() {} },
     {
-      name: 'HomePod Announce',
+      name: 'HomePod Announcements',
       homepodId: 'AA:BB:CC:DD:EE:FF',
       announcements: [{ name: 'Dinner ready', text: 'Dinner is ready' }],
     },
