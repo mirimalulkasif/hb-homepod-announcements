@@ -22,7 +22,7 @@ HomeKit has no free-text field in the Home app. Configured phrases as switches a
 ## Install
 
 ```bash
-npm i -g github:mirimalulkasif/hb-homepod-announce
+npm i -g github:mirimalulkasif/hb-homepod-announcements
 hb-service restart
 ```
 

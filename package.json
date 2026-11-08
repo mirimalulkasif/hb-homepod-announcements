@@ -5,13 +5,13 @@
   "description": "Momentary HomeKit switches that speak configured phrases on a HomePod via TTS + AirPlay (pyatv).",
   "license": "Apache-2.0",
   "author": "mirimalulkasif",
-  "homepage": "https://github.com/mirimalulkasif/hb-homepod-announce#readme",
+  "homepage": "https://github.com/mirimalulkasif/hb-homepod-announcements#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mirimalulkasif/hb-homepod-announce.git"
+    "url": "git+https://github.com/mirimalulkasif/hb-homepod-announcements.git"
   },
   "bugs": {
-    "url": "https://github.com/mirimalulkasif/hb-homepod-announce/issues"
+    "url": "https://github.com/mirimalulkasif/hb-homepod-announcements/issues"
   },
   "keywords": [
     "homebridge-plugin",
