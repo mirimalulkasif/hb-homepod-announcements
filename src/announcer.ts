@@ -3,12 +3,23 @@ import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+// Bundled with the plugin — no system edge-tts / espeak install required.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { EdgeTTS } = require('node-edge-tts') as {
+  EdgeTTS: new (options?: {
+    voice?: string;
+    lang?: string;
+    outputFormat?: string;
+    timeout?: number;
+  }) => { ttsPromise: (text: string, filepath: string) => Promise<void> };
+};
+
 export interface AnnounceOptions {
   text: string;
   /** pyatv device id / MAC / name (from `atvremote scan`). */
   homepodId?: string;
   volume?: number;
-  /** edge-tts voice, e.g. en-US-JennyNeural or he-IL-HilaNeural. */
+  /** Edge neural voice, e.g. en-US-JennyNeural or he-IL-HilaNeural. */
   voice?: string;
   language?: string;
 }
@@ -35,9 +46,11 @@ export interface ShellAnnouncerOptions {
   homepodId?: string;
   /** Default volume 0–100. */
   volume?: number;
-  /** Default edge-tts / espeak voice. */
+  /** Default Edge TTS voice. */
   voice?: string;
   language?: string;
+  /** Plugin install root (for vendor/pyatv). Defaults to package root. */
+  pluginRoot?: string;
   /** homepod-radio HTTP play base, e.g. http://127.0.0.1:7654/play */
   homepodRadioPlayBase?: string;
   /** Writable media folder for homepod-radio. */
@@ -45,25 +58,29 @@ export interface ShellAnnouncerOptions {
   log?: (message: string) => void;
   exec?: ExecFn;
   fetch?: FetchFn;
-  which?: (binary: string) => Promise<boolean>;
+  which?: (binary: string) => Promise<string | undefined>;
+  /** Test hook — skip real Edge TTS. */
+  synthesizeToFile?: (text: string, outPath: string, voice?: string, language?: string) => Promise<void>;
 }
 
 /**
- * Speaks text on a HomePod: synthesize audio locally, then stream via
- * pyatv (`atvremote stream_file`) or homebridge-homepod-radio `/play`.
+ * Speaks text on a HomePod using bundled Edge TTS, then streams via
+ * vendor pyatv (`atvremote`) or homebridge-homepod-radio `/play`.
  */
 export class ShellAnnouncer implements Announcer {
   private readonly log: (message: string) => void;
   private readonly exec: ExecFn;
   private readonly fetch: FetchFn;
-  private readonly which: (binary: string) => Promise<boolean>;
+  private readonly which: (binary: string) => Promise<string | undefined>;
   private readonly playback: 'auto' | 'pyatv' | 'homepod-radio';
   private readonly defaultHomepodId?: string;
   private readonly defaultVolume: number;
-  private readonly defaultVoice?: string;
+  private readonly defaultVoice: string;
   private readonly defaultLanguage?: string;
   private readonly radioPlayBase: string;
   private readonly mediaPath: string;
+  private readonly pluginRoot: string;
+  private readonly synthesizeToFile?: ShellAnnouncerOptions['synthesizeToFile'];
 
   constructor(options: ShellAnnouncerOptions = {}) {
     this.log = options.log || (() => undefined);
@@ -73,10 +90,12 @@ export class ShellAnnouncer implements Announcer {
     this.playback = options.playback || 'auto';
     this.defaultHomepodId = options.homepodId;
     this.defaultVolume = clampVolume(options.volume ?? 50);
-    this.defaultVoice = options.voice;
+    this.defaultVoice = options.voice?.trim() || 'he-IL-HilaNeural';
     this.defaultLanguage = options.language;
     this.radioPlayBase = options.homepodRadioPlayBase || 'http://127.0.0.1:7654/play';
     this.mediaPath = options.mediaPath || '/var/www/tones';
+    this.pluginRoot = options.pluginRoot || join(__dirname, '..');
+    this.synthesizeToFile = options.synthesizeToFile;
   }
 
   async speak(options: AnnounceOptions): Promise<void> {
@@ -94,64 +113,24 @@ export class ShellAnnouncer implements Announcer {
   }
 
   private async synthesize(text: string, options: AnnounceOptions): Promise<string> {
-    const outBase = join(tmpdir(), `hb-announce-${process.pid}-${Date.now()}`);
+    const mp3 = join(tmpdir(), `hb-announce-${process.pid}-${Date.now()}.mp3`);
     const voice = options.voice || this.defaultVoice;
-    const language = options.language || this.defaultLanguage;
+    const language = options.language || this.defaultLanguage || languageFromVoice(voice);
 
-    if (await this.which('edge-tts')) {
-      const mp3 = `${outBase}.mp3`;
-      const args = ['--text', text, '--write-media', mp3];
-      if (voice) {
-        args.push('--voice', voice);
-      }
-      this.log(`TTS edge-tts → ${mp3}`);
-      await this.exec('edge-tts', args);
+    if (this.synthesizeToFile) {
+      await this.synthesizeToFile(text, mp3, voice, language);
       return mp3;
     }
 
-    if (await this.which('espeak-ng')) {
-      const wav = `${outBase}.wav`;
-      const args = ['-w', wav];
-      if (voice) {
-        args.push('-v', voice);
-      } else if (language) {
-        args.push('-v', language);
-      }
-      args.push(text);
-      this.log(`TTS espeak-ng → ${wav}`);
-      await this.exec('espeak-ng', args);
-      return wav;
-    }
-
-    if (await this.which('espeak')) {
-      const wav = `${outBase}.wav`;
-      const args = ['-w', wav];
-      if (voice) {
-        args.push('-v', voice);
-      } else if (language) {
-        args.push('-v', language);
-      }
-      args.push(text);
-      this.log(`TTS espeak → ${wav}`);
-      await this.exec('espeak', args);
-      return wav;
-    }
-
-    if (await this.which('say')) {
-      const aiff = `${outBase}.aiff`;
-      const args = ['-o', aiff];
-      if (voice) {
-        args.push('-v', voice);
-      }
-      args.push(text);
-      this.log(`TTS say → ${aiff}`);
-      await this.exec('say', args);
-      return aiff;
-    }
-
-    throw new Error(
-      'No TTS engine found. Install edge-tts (`pip install edge-tts`) or espeak-ng, then restart Homebridge.',
-    );
+    this.log(`TTS (bundled Edge) voice=${voice} lang=${language}`);
+    const tts = new EdgeTTS({
+      voice,
+      lang: language,
+      outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
+      timeout: 20_000,
+    });
+    await tts.ttsPromise(text, mp3);
+    return mp3;
   }
 
   private async play(audioPath: string, options: AnnounceOptions): Promise<void> {
@@ -164,22 +143,25 @@ export class ShellAnnouncer implements Announcer {
       return;
     }
 
-    if (!homepodId) {
+    const atvremote = await this.resolveAtvremote();
+    if (!atvremote) {
       throw new Error(
-        'homepodId is required for pyatv playback (from `atvremote scan`). Or install homebridge-homepod-radio and set playback to auto/homepod-radio.',
+        'atvremote not found. Reinstall the plugin (postinstall sets up vendor/pyatv), or install homebridge-homepod-radio and set playback to homepod-radio.',
       );
     }
-    if (!(await this.which('atvremote'))) {
-      throw new Error('atvremote not found. Install pyatv (`pip install pyatv`) and ensure it is on PATH.');
+    if (!homepodId) {
+      throw new Error(
+        'homepodId is required for pyatv playback (from `atvremote scan`).',
+      );
     }
 
-    this.log(`Play pyatv id=${homepodId} volume=${volume} file=${audioPath}`);
-    await this.exec('atvremote', [
+    this.log(`Play pyatv (${atvremote}) id=${homepodId} volume=${volume}`);
+    await this.exec(atvremote, [
       '--id',
       homepodId,
       'set_volume=' + String(volume),
     ]).catch(() => undefined);
-    await this.exec('atvremote', ['--id', homepodId, `stream_file=${audioPath}`]);
+    await this.exec(atvremote, ['--id', homepodId, `stream_file=${audioPath}`]);
   }
 
   private async playViaRadio(audioPath: string, volume: number): Promise<void> {
@@ -202,12 +184,32 @@ export class ShellAnnouncer implements Announcer {
     if (this.playback === 'homepod-radio') {
       return 'homepod-radio';
     }
+    if (await this.resolveAtvremote()) {
+      return 'pyatv';
+    }
     try {
       await fs.access(this.mediaPath);
       return 'homepod-radio';
     } catch {
       return 'pyatv';
     }
+  }
+
+  private async resolveAtvremote(): Promise<string | undefined> {
+    const vendor = join(
+      this.pluginRoot,
+      'vendor',
+      'pyatv',
+      process.platform === 'win32' ? 'Scripts' : 'bin',
+      process.platform === 'win32' ? 'atvremote.exe' : 'atvremote',
+    );
+    try {
+      await fs.access(vendor);
+      return vendor;
+    } catch {
+      // fall through
+    }
+    return this.which('atvremote');
   }
 }
 
@@ -222,6 +224,11 @@ export class FakeAnnouncer implements Announcer {
       throw this.failWith;
     }
   }
+}
+
+function languageFromVoice(voice: string): string {
+  const match = /^([a-z]{2}-[A-Z]{2})-/.exec(voice);
+  return match ? match[1] : 'en-US';
 }
 
 function clampVolume(value: number): number {
@@ -258,12 +265,13 @@ async function defaultExec(command: string, args: string[]): Promise<{ stdout: s
   });
 }
 
-async function defaultWhich(binary: string): Promise<boolean> {
+async function defaultWhich(binary: string): Promise<string | undefined> {
   try {
-    await defaultExec('which', [binary]);
-    return true;
+    const { stdout } = await defaultExec('which', [binary]);
+    const path = stdout.trim().split('\n')[0];
+    return path || undefined;
   } catch {
-    return false;
+    return undefined;
   }
 }
 

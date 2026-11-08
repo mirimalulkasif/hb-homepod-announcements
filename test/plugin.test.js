@@ -10,7 +10,7 @@ const { HomePodAnnouncePlatform, createTestPlatform } = require('../dist/platfor
 const { FakeAnnouncer, ShellAnnouncer } = require('../dist/announcer');
 const { AnnounceHttpServer } = require('../dist/http-server');
 
-test('the plugin registers the HomePod Announce platform', () => {
+test('the plugin registers the HomePod Announcements platform', () => {
   let registered = null;
   plugin({
     registerPlatform(pluginName, platformName, constructor) {
@@ -40,31 +40,28 @@ test('momentary switch speaks text then turns off', async () => {
   assert.equal(on.value, false);
 });
 
-test('ShellAnnouncer uses edge-tts then atvremote stream_file', async () => {
+test('ShellAnnouncer uses bundled TTS then vendor/path atvremote', async () => {
   const commands = [];
   const announcer = new ShellAnnouncer({
     playback: 'pyatv',
     homepodId: 'AA:BB',
     volume: 40,
-    voice: 'en-US-JennyNeural',
-    which: async (binary) => binary === 'edge-tts' || binary === 'atvremote',
+    voice: 'he-IL-HilaNeural',
+    which: async () => '/usr/bin/atvremote',
+    synthesizeToFile: async (_text, outPath) => {
+      fs.writeFileSync(outPath, 'fake-audio');
+    },
     exec: async (command, args) => {
       commands.push({ command, args: [...args] });
-      if (command === 'edge-tts') {
-        const out = args[args.indexOf('--write-media') + 1];
-        fs.writeFileSync(out, 'fake-audio');
-      }
       return { stdout: '', stderr: '' };
     },
   });
 
-  await announcer.speak({ text: 'Hello' });
+  await announcer.speak({ text: 'שלום' });
 
-  assert.equal(commands[0].command, 'edge-tts');
-  assert.ok(commands[0].args.includes('Hello'));
-  assert.ok(commands[0].args.includes('en-US-JennyNeural'));
+  assert.equal(commands[0].command, '/usr/bin/atvremote');
   const stream = commands.find(
-    (entry) => entry.command === 'atvremote' && entry.args.some((arg) => String(arg).startsWith('stream_file=')),
+    (entry) => entry.args.some((arg) => String(arg).startsWith('stream_file=')),
   );
   assert.ok(stream, 'expected atvremote stream_file');
 });

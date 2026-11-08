@@ -1,32 +1,43 @@
 # homebridge-homepod-announcements
 
-Momentary **HomeKit switches** that speak configured phrases on a **HomePod** (or any AirPlay speaker).
+Momentary **HomeKit switches** that speak configured phrases on a **HomePod**.
 
-GitHub: [`hb-homepod-announcements`](https://github.com/mirimalulkasif/hb-homepod-announcements). Homebridge requires the `homebridge-` package prefix (same pattern as `hb-switcher-laundry` → `homebridge-switcher-laundry`).
+Tap a switch → the plugin synthesizes speech → streams it to the HomePod → the switch turns off.
 
-Tap a switch in the Home app (or flip it from an automation) → the plug-in synthesizes speech → streams audio to the HomePod → the switch turns itself off.
-
-## Why a switch?
-
-HomeKit has no free-text field in the Home app. Configured phrases as switches are the reliable pattern: they work in scenes, automations, and Siri (“Turn on Dinner ready”). For *dynamic* text (laundry finished, gate open), enable the optional HTTP endpoint.
-
-## Requirements (on the Homebridge host)
-
-1. **TTS** — one of:
-   - [`edge-tts`](https://github.com/rany2/edge-tts) (recommended quality, Hebrew OK): `pip install edge-tts`
-   - `espeak-ng`
-   - macOS `say`
-2. **Playback** — one of:
-   - [`pyatv`](https://pyatv.dev) on PATH: `pip install pyatv` then `atvremote scan`
-   - [homebridge-homepod-radio](https://github.com/homebridge-plugins/homebridge-homepod-radio) with its `/play` HTTP API
-3. Home app → Home Settings → **Allow Speaker & TV Access** → Everyone (or anyone on the network), then **reboot the HomePod**. RAOP pairing should be `NotNeeded` (`atvremote --id <id> pairing_state`).
-
-## Install
+## Install (plugin only)
 
 ```bash
-npm i -g github:mirimalulkasif/hb-homepod-announcements
-hb-service restart
+sudo npm i -g homebridge-homepod-announcements
+# or until npm is updated:
+sudo npm i -g github:mirimalulkasif/hb-homepod-announcements
+sudo hb-service restart
 ```
+
+On install the plugin:
+
+1. Pulls in **bundled Edge TTS** (`node-edge-tts`) — no `edge-tts` / `espeak` to install
+2. Creates a private **pyatv** venv under the plugin’s `vendor/` folder (needs `python3` + `python3-venv` on the host once)
+
+Host one-time OS packages (usually already present on Raspberry Pi OS):
+
+```bash
+sudo apt install -y python3 python3-venv
+```
+
+## HomePod setup
+
+1. Home app → Home Settings → **Allow Speaker & TV Access** → Everyone (or anyone on the network)
+2. Reboot the HomePod
+3. Find the id:
+
+```bash
+# uses the plugin’s vendored binary after install, or system atvremote
+atvremote scan
+# or:
+"$(npm root -g)/homebridge-homepod-announcements/vendor/pyatv/bin/atvremote" scan
+```
+
+Copy the **Identifier** into `homepodId`.
 
 ## Config example
 
@@ -40,18 +51,13 @@ hb-service restart
   "playback": "pyatv",
   "httpPort": 18081,
   "announcements": [
-    { "name": "Dinner ready", "text": "ארוחת הערב מוכנה" },
-    { "name": "Dryer done", "text": "המייבש סיים" },
-    { "name": "Gate", "text": "Someone is at the gate" }
+    { "name": "WM-Done", "text": "מכונת הכביסה סיימה" },
+    { "name": "Dryer done", "text": "המייבש סיים" }
   ]
 }
 ```
 
-Find `homepodId` with:
-
-```bash
-atvremote scan
-```
+Default voice is `he-IL-HilaNeural`. Override per announcement if needed.
 
 ## Dynamic text (HTTP)
 
@@ -63,15 +69,14 @@ curl -X POST http://HOMEBRIDGE:18081/announce \
   -d '{"text":"הכביסה הסתיימה"}'
 ```
 
-Useful from Switcher Laundry “Done” webhooks or Node-RED.
+## Playback options
 
-## Suggested Home automations
-
-- **Dryer Done** contact opens → turn on **Dryer done** switch  
-- **Gate** motion → turn on **Gate** switch  
+- `pyatv` (default when vendor/system `atvremote` exists) — AirPlay stream
+- `homepod-radio` — play via [homebridge-homepod-radio](https://github.com/homebridge-plugins/homebridge-homepod-radio) `/play` if you already use that plugin
+- `auto` — prefer pyatv, else homepod-radio media folder
 
 ## Notes
 
-- Announcements interrupt whatever the HomePod is playing (AirPlay stream).
-- Keep phrases short; long TTS + AirPlay startup can take a few seconds.
-- Existing plugins like `homebridge-pipo-speak` solve a similar problem with bundled Piper; this plugin stays lean and uses tools you already install (`edge-tts` / `pyatv`).
+- TTS needs outbound HTTPS to Microsoft Edge’s speech service (no API key).
+- Announcements interrupt whatever the HomePod is playing.
+- Keep phrases short; AirPlay startup takes a couple of seconds.

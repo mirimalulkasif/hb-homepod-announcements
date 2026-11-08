@@ -2,7 +2,7 @@
   "pluginAlias": "HomePodAnnouncements",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Momentary switches that speak text on a HomePod. Needs a TTS engine (edge-tts or espeak-ng) and playback via pyatv or homebridge-homepod-radio. Home app: tap the switch → HomePod talks → switch turns off.",
+  "headerDisplay": "Momentary switches that speak text on a HomePod. TTS is bundled; pyatv is installed into the plugin on npm install. Set homepodId from atvremote scan. Home app: tap the switch → HomePod talks → switch turns off.",
   "schema": {
     "type": "object",
     "properties": {
@@ -28,12 +28,13 @@
       "voice": {
         "title": "Default TTS voice",
         "type": "string",
-        "description": "edge-tts voice (e.g. en-US-JennyNeural, he-IL-HilaNeural) or espeak voice name."
+        "default": "he-IL-HilaNeural",
+        "description": "Microsoft Edge neural voice (bundled). Examples: he-IL-HilaNeural, en-US-JennyNeural."
       },
       "language": {
-        "title": "Fallback language (espeak)",
+        "title": "Language (optional)",
         "type": "string",
-        "description": "Used only with espeak/espeak-ng when voice is empty (e.g. he, en)."
+        "description": "Usually inferred from the voice (e.g. he-IL). Override only if needed."
       },
       "playback": {
         "title": "Playback",
