@@ -1,0 +1,104 @@
+{
+  "pluginAlias": "HomePodAnnounce",
+  "pluginType": "platform",
+  "singular": true,
+  "headerDisplay": "Momentary switches that speak text on a HomePod. Needs a TTS engine (edge-tts or espeak-ng) and playback via pyatv or homebridge-homepod-radio. Home app: tap the switch → HomePod talks → switch turns off.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "title": "Name",
+        "type": "string",
+        "default": "HomePod Announce",
+        "required": true
+      },
+      "homepodId": {
+        "title": "Default HomePod id",
+        "type": "string",
+        "description": "From `atvremote scan` (MAC / identifier). Required for pyatv playback unless every announcement sets its own id.",
+        "required": true
+      },
+      "volume": {
+        "title": "Default volume (0–100)",
+        "type": "integer",
+        "default": 50,
+        "minimum": 0,
+        "maximum": 100
+      },
+      "voice": {
+        "title": "Default TTS voice",
+        "type": "string",
+        "description": "edge-tts voice (e.g. en-US-JennyNeural, he-IL-HilaNeural) or espeak voice name."
+      },
+      "language": {
+        "title": "Fallback language (espeak)",
+        "type": "string",
+        "description": "Used only with espeak/espeak-ng when voice is empty (e.g. he, en)."
+      },
+      "playback": {
+        "title": "Playback",
+        "type": "string",
+        "default": "auto",
+        "oneOf": [
+          { "title": "Auto (homepod-radio media folder if present, else pyatv)", "enum": ["auto"] },
+          { "title": "pyatv (atvremote stream_file)", "enum": ["pyatv"] },
+          { "title": "homebridge-homepod-radio /play", "enum": ["homepod-radio"] }
+        ]
+      },
+      "homepodRadioPlayBase": {
+        "title": "homepod-radio play URL",
+        "type": "string",
+        "default": "http://127.0.0.1:7654/play",
+        "description": "Only used when playback is auto/homepod-radio."
+      },
+      "mediaPath": {
+        "title": "Media folder for homepod-radio",
+        "type": "string",
+        "default": "/var/www/tones"
+      },
+      "httpPort": {
+        "title": "HTTP announce port (0 = off)",
+        "type": "integer",
+        "default": 0,
+        "minimum": 0,
+        "description": "POST /announce {\"text\":\"...\"} for dynamic phrases from other automations."
+      },
+      "announcements": {
+        "title": "Announcement switches",
+        "type": "array",
+        "required": true,
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "title": "Switch name",
+              "type": "string",
+              "required": true,
+              "default": "Dinner ready"
+            },
+            "text": {
+              "title": "Spoken text",
+              "type": "string",
+              "required": true,
+              "default": "Dinner is ready"
+            },
+            "homepodId": {
+              "title": "HomePod id override",
+              "type": "string"
+            },
+            "volume": {
+              "title": "Volume override",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            },
+            "voice": {
+              "title": "Voice override",
+              "type": "string"
+            }
+          }
+        }
+      }
+    }
+  }
+}
