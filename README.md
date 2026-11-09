@@ -4,14 +4,9 @@ Momentary **HomeKit switches** that speak configured phrases on a **HomePod**.
 
 Tap a switch → the plugin synthesizes speech → streams it to the HomePod → the switch turns off.
 
-## Install (plugin only)
+## Install / update
 
-```bash
-sudo npm i -g homebridge-homepod-announcements
-# or until npm is updated:
-sudo npm i -g github:mirimalulkasif/hb-homepod-announcements
-sudo hb-service restart
-```
+Use the **Homebridge UI → Plugins** page. Search for `homebridge-homepod-announcements` and Install / Update. Do not install from git on the Pi.
 
 On install the plugin:
 
@@ -39,6 +34,16 @@ atvremote scan
 
 Copy the **Identifier** into `homepodId`.
 
+## Voices & styles
+
+In the plugin settings:
+
+- **Default voice** — dropdown (Hila / Avri Hebrew, multilingual, English)
+- **Default speaking style** — Normal, Cheerful, Calm, Whisper, Announcer, Urgent, Warm, Excited, Playful
+- Each announcement can override voice and style
+
+Styles use Edge TTS rate/pitch (same style list idea as `homebridge-homepod-israel-hebrew`).
+
 ## Config example
 
 ```json
@@ -47,17 +52,18 @@ Copy the **Identifier** into `homepodId`.
   "name": "HomePod Announcements",
   "homepodId": "AA:BB:CC:DD:EE:FF",
   "volume": 45,
-  "voice": "he-IL-HilaNeural",
+  "voice": "hila",
+  "style": "announcer",
   "playback": "pyatv",
   "httpPort": 18081,
   "announcements": [
-    { "name": "WM-Done", "text": "מכונת הכביסה סיימה" },
-    { "name": "Dryer done", "text": "המייבש סיים" }
+    { "name": "WM-Done", "text": "מכונת הכביסה סיימה", "style": "cheerful" },
+    { "name": "Quiet night", "text": "לילה טוב", "style": "whisper" }
   ]
 }
 ```
 
-Default voice is `he-IL-HilaNeural`. Override per announcement if needed.
+Older configs that still use full Edge names (`he-IL-HilaNeural`) keep working.
 
 ## Dynamic text (HTTP)
 
@@ -66,7 +72,7 @@ With `httpPort` set:
 ```bash
 curl -X POST http://HOMEBRIDGE:18081/announce \
   -H 'content-type: application/json' \
-  -d '{"text":"הכביסה הסתיימה"}'
+  -d '{"text":"הכביסה הסתיימה","style":"urgent"}'
 ```
 
 ## Playback options
@@ -78,5 +84,4 @@ curl -X POST http://HOMEBRIDGE:18081/announce \
 ## Notes
 
 - TTS needs outbound HTTPS to Microsoft Edge’s speech service (no API key).
-- Announcements interrupt whatever the HomePod is playing.
-- Keep phrases short; AirPlay startup takes a couple of seconds.
+- This plugin is Edge TTS only. Premium engines (Gemini / OpenAI / ElevenLabs) are not included.

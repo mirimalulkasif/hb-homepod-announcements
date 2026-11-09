@@ -2,7 +2,7 @@
   "pluginAlias": "HomePodAnnouncements",
   "pluginType": "platform",
   "singular": true,
-  "headerDisplay": "Momentary switches that speak text on a HomePod. TTS is bundled; pyatv is installed into the plugin on npm install. Set homepodId from atvremote scan. Home app: tap the switch → HomePod talks → switch turns off.",
+  "headerDisplay": "Momentary switches that speak text on a HomePod. Pick a voice and speaking style (cheer, whisper, announcer, …). TTS is bundled; pyatv is set up on install.",
   "schema": {
     "type": "object",
     "properties": {
@@ -26,10 +26,41 @@
         "maximum": 100
       },
       "voice": {
-        "title": "Default TTS voice",
+        "title": "Default voice",
         "type": "string",
-        "default": "he-IL-HilaNeural",
-        "description": "Microsoft Edge neural voice (bundled). Examples: he-IL-HilaNeural, en-US-JennyNeural."
+        "default": "hila",
+        "oneOf": [
+          { "title": "Hila (Hebrew · female)", "enum": ["hila"] },
+          { "title": "Avri (Hebrew · male)", "enum": ["avri"] },
+          { "title": "Ava (multilingual · female)", "enum": ["ava"] },
+          { "title": "Emma (multilingual · female)", "enum": ["emma"] },
+          { "title": "Andrew (multilingual · male)", "enum": ["andrew"] },
+          { "title": "Brian (multilingual · male)", "enum": ["brian"] },
+          { "title": "Jenny (English · female)", "enum": ["jenny"] },
+          { "title": "Guy (English · male)", "enum": ["guy"] },
+          { "title": "Aria (English · female)", "enum": ["aria"] },
+          { "title": "Davis (English · male)", "enum": ["davis"] },
+          { "title": "Sara (English · female)", "enum": ["sara"] },
+          { "title": "Tony (English · male)", "enum": ["tony"] }
+        ],
+        "description": "Microsoft Edge neural voice (bundled, free, no API key)."
+      },
+      "style": {
+        "title": "Default speaking style",
+        "type": "string",
+        "default": "normal",
+        "oneOf": [
+          { "title": "Normal", "enum": ["normal"] },
+          { "title": "Cheerful", "enum": ["cheerful"] },
+          { "title": "Calm & quiet", "enum": ["calm"] },
+          { "title": "Whisper", "enum": ["whisper"] },
+          { "title": "Announcer", "enum": ["announcer"] },
+          { "title": "Urgent warning", "enum": ["urgent"] },
+          { "title": "Warm & loving", "enum": ["warm"] },
+          { "title": "Excited", "enum": ["excited"] },
+          { "title": "Playful / funny", "enum": ["funny"] }
+        ],
+        "description": "Approximated with Edge TTS rate/pitch (same style list as homebridge-homepod-israel-hebrew)."
       },
       "language": {
         "title": "Language (optional)",
@@ -94,8 +125,39 @@
               "maximum": 100
             },
             "voice": {
-              "title": "Voice override",
-              "type": "string"
+              "title": "Voice (optional override)",
+              "type": "string",
+              "oneOf": [
+                { "title": "Hila (Hebrew · female)", "enum": ["hila"] },
+                { "title": "Avri (Hebrew · male)", "enum": ["avri"] },
+                { "title": "Ava (multilingual · female)", "enum": ["ava"] },
+                { "title": "Emma (multilingual · female)", "enum": ["emma"] },
+                { "title": "Andrew (multilingual · male)", "enum": ["andrew"] },
+                { "title": "Brian (multilingual · male)", "enum": ["brian"] },
+                { "title": "Jenny (English · female)", "enum": ["jenny"] },
+                { "title": "Guy (English · male)", "enum": ["guy"] },
+                { "title": "Aria (English · female)", "enum": ["aria"] },
+                { "title": "Davis (English · male)", "enum": ["davis"] },
+                { "title": "Sara (English · female)", "enum": ["sara"] },
+                { "title": "Tony (English · male)", "enum": ["tony"] }
+              ],
+              "description": "Omit to use the platform default voice."
+            },
+            "style": {
+              "title": "Speaking style (optional override)",
+              "type": "string",
+              "oneOf": [
+                { "title": "Normal", "enum": ["normal"] },
+                { "title": "Cheerful", "enum": ["cheerful"] },
+                { "title": "Calm & quiet", "enum": ["calm"] },
+                { "title": "Whisper", "enum": ["whisper"] },
+                { "title": "Announcer", "enum": ["announcer"] },
+                { "title": "Urgent warning", "enum": ["urgent"] },
+                { "title": "Warm & loving", "enum": ["warm"] },
+                { "title": "Excited", "enum": ["excited"] },
+                { "title": "Playful / funny", "enum": ["funny"] }
+              ],
+              "description": "Omit to use the platform default style."
             }
           }
         }

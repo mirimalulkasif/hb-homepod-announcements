@@ -9,6 +9,7 @@ const plugin = require('../dist/index');
 const { HomePodAnnouncePlatform, createTestPlatform } = require('../dist/platform');
 const { FakeAnnouncer, ShellAnnouncer } = require('../dist/announcer');
 const { AnnounceHttpServer } = require('../dist/http-server');
+const { resolveVoice } = require('../dist/voices');
 
 test('the plugin registers the HomePod Announcements platform', () => {
   let registered = null;
@@ -42,13 +43,16 @@ test('momentary switch speaks text then turns off', async () => {
 
 test('ShellAnnouncer uses bundled TTS then vendor/path atvremote', async () => {
   const commands = [];
+  const synth = [];
   const announcer = new ShellAnnouncer({
     playback: 'pyatv',
     homepodId: 'AA:BB',
     volume: 40,
-    voice: 'he-IL-HilaNeural',
+    voice: 'hila',
+    style: 'whisper',
     which: async () => '/usr/bin/atvremote',
-    synthesizeToFile: async (_text, outPath) => {
+    synthesizeToFile: async (text, outPath, voice, language, rate, pitch) => {
+      synth.push({ text, voice, language, rate, pitch });
       fs.writeFileSync(outPath, 'fake-audio');
     },
     exec: async (command, args) => {
@@ -59,11 +63,25 @@ test('ShellAnnouncer uses bundled TTS then vendor/path atvremote', async () => {
 
   await announcer.speak({ text: 'שלום' });
 
+  assert.equal(synth[0].voice, 'he-IL-HilaNeural');
+  assert.equal(synth[0].rate, '-15%');
+  assert.equal(synth[0].pitch, '-10Hz');
   assert.equal(commands[0].command, '/usr/bin/atvremote');
   const stream = commands.find(
     (entry) => entry.args.some((arg) => String(arg).startsWith('stream_file=')),
   );
   assert.ok(stream, 'expected atvremote stream_file');
+});
+
+test('resolveVoice maps ids and styles like israel-hebrew', () => {
+  const hila = resolveVoice('hila', 'announcer');
+  assert.equal(hila.voice, 'he-IL-HilaNeural');
+  assert.equal(hila.style, 'announcer');
+  assert.equal(hila.rate, '-6%');
+
+  const legacy = resolveVoice('he-IL-AvriNeural', 'funny');
+  assert.equal(legacy.voice, 'he-IL-AvriNeural');
+  assert.equal(legacy.style, 'funny');
 });
 
 test('HTTP /announce speaks arbitrary text', async () => {

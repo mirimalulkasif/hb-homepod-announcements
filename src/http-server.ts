@@ -8,6 +8,7 @@ export interface AnnounceHttpOptions {
   defaultHomepodId?: string;
   defaultVolume?: number;
   defaultVoice?: string;
+  defaultStyle?: string;
   log?: (message: string) => void;
 }
 
@@ -15,7 +16,7 @@ export interface AnnounceHttpOptions {
  * Optional LAN endpoint so other automations (laundry Done, webhooks) can
  * speak arbitrary text without a dedicated HomeKit switch.
  *
- * POST /announce  { "text": "Dryer is done", "homepodId"?: "...", "volume"?: 50 }
+ * POST /announce  { "text": "Dryer is done", "homepodId"?: "...", "volume"?: 50, "voice"?: "hila", "style"?: "whisper" }
  * GET  /health
  */
 export class AnnounceHttpServer {
@@ -66,6 +67,7 @@ export class AnnounceHttpServer {
           homepodId: typeof body.homepodId === 'string' ? body.homepodId : this.options.defaultHomepodId,
           volume: typeof body.volume === 'number' ? body.volume : this.options.defaultVolume,
           voice: typeof body.voice === 'string' ? body.voice : this.options.defaultVoice,
+          style: typeof body.style === 'string' ? body.style : this.options.defaultStyle,
         });
         json(res, 200, { ok: true });
       } catch (error: unknown) {

@@ -3,6 +3,8 @@ import { promises as fs } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { DEFAULT_STYLE_ID, DEFAULT_VOICE_ID, resolveVoice } from './voices';
+
 // Bundled with the plugin — no system edge-tts / espeak install required.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { EdgeTTS } = require('node-edge-tts') as {
@@ -10,6 +12,8 @@ const { EdgeTTS } = require('node-edge-tts') as {
     voice?: string;
     lang?: string;
     outputFormat?: string;
+    rate?: string;
+    pitch?: string;
     timeout?: number;
   }) => { ttsPromise: (text: string, filepath: string) => Promise<void> };
 };
@@ -19,8 +23,10 @@ export interface AnnounceOptions {
   /** pyatv device id / MAC / name (from `atvremote scan`). */
   homepodId?: string;
   volume?: number;
-  /** Edge neural voice, e.g. en-US-JennyNeural or he-IL-HilaNeural. */
+  /** Voice id (hila, avri, …) or full Edge name (he-IL-HilaNeural). */
   voice?: string;
+  /** Style id: normal, whisper, announcer, funny, … */
+  style?: string;
   language?: string;
 }
 
@@ -46,8 +52,10 @@ export interface ShellAnnouncerOptions {
   homepodId?: string;
   /** Default volume 0–100. */
   volume?: number;
-  /** Default Edge TTS voice. */
+  /** Default voice id or Edge voice name. */
   voice?: string;
+  /** Default speaking style id. */
+  style?: string;
   language?: string;
   /** Plugin install root (for vendor/pyatv). Defaults to package root. */
   pluginRoot?: string;
@@ -60,7 +68,14 @@ export interface ShellAnnouncerOptions {
   fetch?: FetchFn;
   which?: (binary: string) => Promise<string | undefined>;
   /** Test hook — skip real Edge TTS. */
-  synthesizeToFile?: (text: string, outPath: string, voice?: string, language?: string) => Promise<void>;
+  synthesizeToFile?: (
+    text: string,
+    outPath: string,
+    voice?: string,
+    language?: string,
+    rate?: string,
+    pitch?: string,
+  ) => Promise<void>;
 }
 
 /**
@@ -76,6 +91,7 @@ export class ShellAnnouncer implements Announcer {
   private readonly defaultHomepodId?: string;
   private readonly defaultVolume: number;
   private readonly defaultVoice: string;
+  private readonly defaultStyle: string;
   private readonly defaultLanguage?: string;
   private readonly radioPlayBase: string;
   private readonly mediaPath: string;
@@ -90,7 +106,8 @@ export class ShellAnnouncer implements Announcer {
     this.playback = options.playback || 'auto';
     this.defaultHomepodId = options.homepodId;
     this.defaultVolume = clampVolume(options.volume ?? 50);
-    this.defaultVoice = options.voice?.trim() || 'he-IL-HilaNeural';
+    this.defaultVoice = options.voice?.trim() || DEFAULT_VOICE_ID;
+    this.defaultStyle = options.style?.trim() || DEFAULT_STYLE_ID;
     this.defaultLanguage = options.language;
     this.radioPlayBase = options.homepodRadioPlayBase || 'http://127.0.0.1:7654/play';
     this.mediaPath = options.mediaPath || '/var/www/tones';
@@ -114,19 +131,27 @@ export class ShellAnnouncer implements Announcer {
 
   private async synthesize(text: string, options: AnnounceOptions): Promise<string> {
     const mp3 = join(tmpdir(), `hb-announce-${process.pid}-${Date.now()}.mp3`);
-    const voice = options.voice || this.defaultVoice;
-    const language = options.language || this.defaultLanguage || languageFromVoice(voice);
+    const resolved = resolveVoice(
+      options.voice || this.defaultVoice,
+      options.style || this.defaultStyle,
+    );
+    const language = options.language || this.defaultLanguage || resolved.language;
 
     if (this.synthesizeToFile) {
-      await this.synthesizeToFile(text, mp3, voice, language);
+      await this.synthesizeToFile(text, mp3, resolved.voice, language, resolved.rate, resolved.pitch);
       return mp3;
     }
 
-    this.log(`TTS (bundled Edge) voice=${voice} lang=${language}`);
+    this.log(
+      `TTS (bundled Edge) voice=${resolved.voice} style=${resolved.style}`
+        + ` rate=${resolved.rate} pitch=${resolved.pitch} lang=${language}`,
+    );
     const tts = new EdgeTTS({
-      voice,
+      voice: resolved.voice,
       lang: language,
       outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
+      rate: resolved.rate,
+      pitch: resolved.pitch,
       timeout: 20_000,
     });
     await tts.ttsPromise(text, mp3);
@@ -224,11 +249,6 @@ export class FakeAnnouncer implements Announcer {
       throw this.failWith;
     }
   }
-}
-
-function languageFromVoice(voice: string): string {
-  const match = /^([a-z]{2}-[A-Z]{2})-/.exec(voice);
-  return match ? match[1] : 'en-US';
 }
 
 function clampVolume(value: number): number {

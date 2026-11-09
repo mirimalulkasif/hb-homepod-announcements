@@ -1,7 +1,7 @@
 {
   "name": "homebridge-homepod-announcements",
   "displayName": "HomePod Announcements",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Momentary HomeKit switches that speak configured phrases on a HomePod. Bundles Edge TTS; sets up pyatv on install.",
   "license": "Apache-2.0",
   "author": "mirimalulkasif",

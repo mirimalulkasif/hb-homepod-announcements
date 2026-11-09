@@ -11,7 +11,14 @@ import type {
 import { FakeAnnouncer, ShellAnnouncer, type Announcer } from './announcer';
 import { AnnounceAccessory, type AnnouncementConfig } from './accessory';
 import { AnnounceHttpServer } from './http-server';
-import { DEFAULT_HTTP_PORT, DEFAULT_VOLUME, PLATFORM_NAME, PLUGIN_NAME } from './settings';
+import {
+  DEFAULT_HTTP_PORT,
+  DEFAULT_STYLE_ID,
+  DEFAULT_VOICE_ID,
+  DEFAULT_VOLUME,
+  PLATFORM_NAME,
+  PLUGIN_NAME,
+} from './settings';
 
 export class HomePodAnnouncePlatform implements DynamicPlatformPlugin {
   public readonly Service: typeof Service;
@@ -42,7 +49,8 @@ export class HomePodAnnouncePlatform implements DynamicPlatformPlugin {
         playback: normalizePlayback(this.config.playback),
         homepodId: stringOrUndefined(this.config.homepodId),
         volume: numberOr(this.config.volume, DEFAULT_VOLUME),
-        voice: stringOrUndefined(this.config.voice),
+        voice: stringOrUndefined(this.config.voice) || DEFAULT_VOICE_ID,
+        style: stringOrUndefined(this.config.style) || DEFAULT_STYLE_ID,
         language: stringOrUndefined(this.config.language),
         homepodRadioPlayBase: stringOrUndefined(this.config.homepodRadioPlayBase),
         mediaPath: stringOrUndefined(this.config.mediaPath),
@@ -102,7 +110,8 @@ export class HomePodAnnouncePlatform implements DynamicPlatformPlugin {
       announcer: this.announcer,
       defaultHomepodId: stringOrUndefined(this.config.homepodId),
       defaultVolume: numberOr(this.config.volume, DEFAULT_VOLUME),
-      defaultVoice: stringOrUndefined(this.config.voice),
+      defaultVoice: stringOrUndefined(this.config.voice) || DEFAULT_VOICE_ID,
+      defaultStyle: stringOrUndefined(this.config.style) || DEFAULT_STYLE_ID,
       log: (message) => this.log.info(message),
     });
     this.http.start();
@@ -128,6 +137,7 @@ export class HomePodAnnouncePlatform implements DynamicPlatformPlugin {
         homepodId: stringOrUndefined(item.homepodId),
         volume: item.volume != null ? numberOr(item.volume, DEFAULT_VOLUME) : undefined,
         voice: stringOrUndefined(item.voice),
+        style: stringOrUndefined(item.style),
       });
     }
     return result;

@@ -9,6 +9,7 @@ export interface AnnouncementConfig {
   homepodId?: string;
   volume?: number;
   voice?: string;
+  style?: string;
 }
 
 /**
@@ -65,6 +66,7 @@ export class AnnounceAccessory {
         homepodId: this.announcement.homepodId,
         volume: this.announcement.volume,
         voice: this.announcement.voice,
+        style: this.announcement.style,
       });
       this.platform.log.info(`[${this.announcement.name}] done`);
     } catch (error: unknown) {
